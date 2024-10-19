@@ -6,77 +6,67 @@ use std::{
     process::{Command, Stdio},
     str,
 };
-/// 入力されたコマンドを解釈、実行する関数。
-/// ps1には&mut dirを、inputには入力する&str型を、setupにはload_setupファイルに定義されているConfig構造体を入力する
+/// 入力されたコマンドを解析し、適切な処理を実行する関数。
+/// - `ps1`: 現在のディレクトリ情報を保持する`dir`構造体（ミュータブル）
+/// - `input`: ユーザーからの入力文字列
+/// - `setup`: 設定データ（`Config`構造体）を受け取る
 pub fn input(ps1: &mut structs::dir, input: &str, setup: load_setup::Config) -> String {
-    // inputを空白で分割する。Vec<&str>型になる
+    // 入力文字列を空白で分割し、Vec<&str>型のコマンドリストに変換
     let cmd = input.split_whitespace().collect::<Vec<&str>>();
 
-    // commandを解釈するmatch式。
-    // cmd変数の最初の要素を取得し、matchで処理を変える
-    // cdやexitコマンドを定義している。
-    // また、lsも定義している
+    // コマンドの最初の要素に基づいて処理を分岐
     if let Some(command) = cmd.first() {
         match *command {
-            // 最初の要素がcdだった場合の処理
+            // cdコマンド：ディレクトリを変更
             "cd" => {
-                // cmdのlenが2、もしくは2以上だった場合の処理
+                // 2つ目の引数があれば指定のディレクトリに移動、なければホームディレクトリに移動
                 if cmd.len() == 2 {
-                    // cmdの二番目の要素に移動する
                     ps1.cd(&cmd[1].to_string(), &setup);
                 } else {
-                    // 2、2以上ではなかった際の処理
-                    // homeを取得
                     let home = home_dir().unwrap();
-                    // 二番目の要素が無かった場合、homeに戻る
                     ps1.cd(&home.to_str().unwrap().to_string(), &setup);
                 }
                 return "".to_string();
             }
-            // exitだった場合の処理
+            // exitコマンド：シェルを終了
             "exit" => {
                 println!("exit");
                 return "exit".to_string();
             }
-            // 空白無視
+            // 空の入力は無視
             "" => return "".to_string(),
-            // lsだった場合の処理
+            // lsコマンド：ディレクトリの内容を表示
             "ls" => {
-                // lsコマンドを実行。
                 if let Ok(o) = Command::new("ls")
                     .args(&cmd[1..])
-                    // ls_configのフラグ
-                    .arg(setup.ls_config)
-                    // .output()をつけるとlsがpipeしたと認識し、ディレクトリやファイルが縦に表示されるので-Cをつけて強制的に横並びに表示する
-                    .arg("-C")
+                    .arg(setup.ls_config) // 設定ファイルで指定されたオプションを追加
+                    .arg("-C")             // ディレクトリとファイルを横並びに表示
                     .output()
                 {
-                    // utf8に解釈して日本語を表示できるようにする
+                    // 出力をUTF-8として解釈し、日本語を含む内容を表示
                     let stdout = str::from_utf8(&o.stdout).unwrap();
-                    // printlnだと表示されたあと余分に開業されるのでprintを使用
-                    print!("{}", stdout);
+                    print!("{}", stdout); // printlnではなくprintで余分な改行を回避
                     io::stdout().flush().unwrap();
                 }
                 return "".to_string();
             }
-            // これら以外は何もしない
+            // その他のコマンド：外部コマンドとして実行
             _ => {}
         }
 
-        // 先程matchしたもの以外はここで実行される
+        // 外部コマンドの実行
         match Command::new(command)
-            .args(&cmd[1..])
-            // inheritを付けてインタラクティブに動作するようにする
-            .stdin(Stdio::inherit())
+            .args(&cmd[1..])  // 引数を設定
+            .stdin(Stdio::inherit())   // インタラクティブに動作させる
             .stdout(Stdio::inherit())
             .stderr(Stdio::inherit())
             .spawn()
         {
             Ok(mut o) => {
-                o.wait().unwrap();
+                o.wait().unwrap(); // コマンドの終了を待機
             }
             Err(e) => {
-                // コマンドが見つからなかった際にエラーメッセージを出力する
+                // コマンドが見つからない場合のエラーメッセージを出力
                 if e.kind() == io::ErrorKind::NotFound {
                     eprintln!("cocoa: {}: command not found", command);
                 } else {
@@ -85,5 +75,5 @@ pub fn input(ps1: &mut structs::dir, input: &str, setup: load_setup::Config) -> 
             }
         }
     }
-    "".to_string()
+    "".to_string() // コマンドが実行されなかった場合は空文字列を返す
 }
