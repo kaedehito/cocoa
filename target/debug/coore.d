@@ -1,1 +1,0 @@
-/home/inado/develop/coore/target/debug/coore: /home/inado/develop/coore/src/PS1.rs /home/inado/develop/coore/src/cd.rs /home/inado/develop/coore/src/input.rs /home/inado/develop/coore/src/main.rs /home/inado/develop/coore/src/structs.rs
