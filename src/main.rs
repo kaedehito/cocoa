@@ -9,88 +9,93 @@ use rustyline::{config::Config, CompletionType, DefaultEditor};
 use std::env;
 
 fn main() {
-    // setup()を実行し、.cocoa_rcをparse。cfg変数にそれぞれの情報を入れる
+    // setup()を実行し、.cocoa_rcを解析してcfgに設定情報を格納
     let cfg = load_setup::setup().unwrap();
 
-    // setup()で取得したcfg変数からstart_up_textを取得し出力する
+    // cfgからstart_up_textを取得し出力
     println!("{}", cfg.start_up_text);
-    // hostnameを取得
+
+    // ホスト名を取得
     let host_name = hostname::get().unwrap().to_str().unwrap().to_string();
-    #[allow(unused)]
-    // usernameを入れるための変数
-    // 忌々しき所有権
+
+    // ユーザー名の変数を定義（所有権に注意）
     let mut username = String::new();
-    // Linuxの場合はUSER変数を参照してusernameを取得する。windowsの場合はUSERNAMEを参照する。
+
+    // LinuxならUSER変数、WindowsならUSERNAME変数からユーザー名を取得
     if let Ok(o) = env::var("USER").or_else(|_| env::var("USERNAME")) {
-        username = o.clone();
+        username = o;
     } else {
-        // 何らかの理由で失敗したときはエラーメッセージを出力する
-        // 現在はひとまずpanicする。場合によってはmatch式にして具体的なエラーメッセージを出す
+        // ユーザー名取得に失敗した場合、パニックを起こす（将来的には詳細なエラーメッセージを実装）
         panic!("Failed to get user name");
-    };
-    // 現在のcurrent_dirを取得する
+    }
+
+    // 現在のディレクトリを取得
     let current_dir = env::current_dir().unwrap().to_str().unwrap().to_string();
-    // ps1にdir型変数を定義する
+
+    // PS1用の構造体を定義
     let mut ps1 = structs::dir {
         now_dir: current_dir.clone(),
         hostname: host_name,
         user_name: username,
     };
 
-    // homeを取得
+    // ホームディレクトリを取得
     let homedir = home_dir().unwrap();
-    // .bash_historyを取得
-    let format = format!("{}/.bash_history", homedir.display());
 
-    // rustylineのconfig
-    // ファイル補完したい
+    // 履歴ファイルのパスを取得（.bash_history）
+    let history_file = format!("{}/.bash_history", homedir.display());
+
+    // rustylineの設定（補完機能を有効化）
     let config = Config::builder()
         .completion_type(CompletionType::List)
         .build();
 
-    // DefaultEditorを使用
-    // API変わっててつらい...
+    // rustylineのエディタを設定
     let mut rl = DefaultEditor::with_config(config).unwrap();
 
-    // 履歴戻る機能
-    if rl.load_history(&format).is_err() {
+    // 履歴ファイルを読み込む（存在しない場合はエラーメッセージを表示）
+    if rl.load_history(&history_file).is_err() {
         println!("No previous history.");
     }
 
+    // PS1のディレクトリを更新
     ps1.cd(&current_dir, &cfg);
 
     // メインループ
     loop {
-        // promptを取得
+        // プロンプト文字列を表示
         let display_ps1 = ps1.display_ps1();
-        // rustylineを使って入力を入手
+
+        // 入力を取得
         let readline = rl.readline(&display_ps1);
 
-        // matchを使ってエラーなどを取得
+        // 入力結果に基づいて処理を分岐
         match readline {
-            Ok(o) => {
-                // 入力された内容を履歴に保存
-                rl.add_history_entry(o.as_str()).unwrap();
-                // input関数に渡して処理する
-                let s = input::input(&mut ps1, o.as_str(), cfg.clone());
-                // input関数がexitを返してきた場合、履歴を保存して終了する
-                if s == "exit" {
-                    rl.save_history(&format).unwrap();
+            Ok(input) => {
+                // 入力を履歴に追加
+                rl.add_history_entry(input.as_str()).unwrap();
+
+                // 入力内容を処理し、結果を取得
+                let result = input::input(&mut ps1, input.as_str(), cfg.clone());
+
+                // "exit"コマンドなら履歴を保存して終了
+                if result == "exit" {
+                    rl.save_history(&history_file).unwrap();
                     std::process::exit(0);
                 }
             }
-            // Ctrl+Cが押された際の処理
+            // Ctrl+Cが押された場合の処理
             Err(ReadlineError::Interrupted) => {
-                // bashみたいに^Cって表示して無視したい
+                // Bashのように^Cを表示して入力を無視
                 println!("^C");
                 continue;
             }
-            // Ctrl+D(EOF)が押された際の処理
+            // Ctrl+Dが押された場合（EOF）の処理
             Err(ReadlineError::Eof) => {
-                // bashがCtrl+Dで終了したので終了する
+                // EOF（Ctrl+D）で終了
                 return;
             }
-            // それ以外はpanicする
+            // その他のエラーはパニックを発生
             Err(e) => {
                 panic!("{}", e);
             }
