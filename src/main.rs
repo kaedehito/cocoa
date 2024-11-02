@@ -7,6 +7,7 @@ mod load_setup;
 use rustyline::error::ReadlineError;
 use rustyline::{config::Config, CompletionType, DefaultEditor};
 use std::env;
+use structs::Dir;
 
 fn main() {
     // setup()を実行し、.cocoa_rcを解析してcfgに設定情報を格納
@@ -19,7 +20,7 @@ fn main() {
     let host_name = hostname::get().unwrap().to_str().unwrap().to_string();
 
     // ユーザー名の変数を定義（所有権に注意）
-    let mut username = String::new();
+    let username;
 
     // LinuxならUSER変数、WindowsならUSERNAME変数からユーザー名を取得
     if let Ok(o) = env::var("USER").or_else(|_| env::var("USERNAME")) {
@@ -33,7 +34,7 @@ fn main() {
     let current_dir = env::current_dir().unwrap().to_str().unwrap().to_string();
 
     // PS1用の構造体を定義
-    let mut ps1 = structs::dir {
+    let mut ps1 = Dir {
         now_dir: current_dir.clone(),
         hostname: host_name,
         user_name: username,
