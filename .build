@@ -1,8 +1,8 @@
 {
   "build": [
-    "cargo build --release",
+    "cargo build --release"
   ],
   "install":[
-    "mv target/release/cocoa .",
+    "mv target/release/cocoa ."
   ]
 }
