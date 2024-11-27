@@ -4,5 +4,8 @@
   ],
   "install":[
     "mv target/release/cocoa ."
+  ],
+  "remove": [
+    "rm ~/.cocoa_rc"
   ]
 }
