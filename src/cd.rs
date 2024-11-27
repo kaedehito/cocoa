@@ -1,8 +1,8 @@
-use crate::{load_setup, structs};
+use crate::{load_setup, structs::Dir};
 use dirs::home_dir;
 use std::{env, io};
 
-impl structs::dir {
+impl Dir {
     pub fn cd(&mut self, dir: &String, setup: &load_setup::Config) {
         // 現在のカレントディレクトリを取得
         let home_dir = home_dir().unwrap();

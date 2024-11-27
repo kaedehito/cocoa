@@ -1,5 +1,5 @@
 use crate::load_setup;
-use crate::structs;
+use crate::structs::Dir;
 use dirs::home_dir;
 use std::{
     io::{self, Write},
@@ -10,7 +10,7 @@ use std::{
 /// - `ps1`: 現在のディレクトリ情報を保持する`dir`構造体（ミュータブル）
 /// - `input`: ユーザーからの入力文字列
 /// - `setup`: 設定データ（`Config`構造体）を受け取る
-pub fn input(ps1: &mut structs::dir, input: &str, setup: load_setup::Config) -> String {
+pub fn input(ps1: &mut Dir, input: &str, setup: load_setup::Config) -> String {
     // 入力文字列を空白で分割し、Vec<&str>型のコマンドリストに変換
     let cmd = input.split_whitespace().collect::<Vec<&str>>();
 
@@ -40,7 +40,7 @@ pub fn input(ps1: &mut structs::dir, input: &str, setup: load_setup::Config) -> 
                 if let Ok(o) = Command::new("ls")
                     .args(&cmd[1..])
                     .arg(setup.ls_config) // 設定ファイルで指定されたオプションを追加
-                    .arg("-C")             // ディレクトリとファイルを横並びに表示
+                    .arg("-C") // ディレクトリとファイルを横並びに表示
                     .output()
                 {
                     // 出力をUTF-8として解釈し、日本語を含む内容を表示
@@ -56,8 +56,8 @@ pub fn input(ps1: &mut structs::dir, input: &str, setup: load_setup::Config) -> 
 
         // 外部コマンドの実行
         match Command::new(command)
-            .args(&cmd[1..])  // 引数を設定
-            .stdin(Stdio::inherit())   // インタラクティブに動作させる
+            .args(&cmd[1..]) // 引数を設定
+            .stdin(Stdio::inherit()) // インタラクティブに動作させる
             .stdout(Stdio::inherit())
             .stderr(Stdio::inherit())
             .spawn()
